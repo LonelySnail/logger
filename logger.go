@@ -50,6 +50,7 @@ const (
 
 type _FILE struct {
 	dir           string
+	day           int
 	_suffix       int
 	isCover       bool
 	_date         *time.Time
@@ -68,15 +69,6 @@ func SetConsole(isConsole bool) {
 
 func SetLevel(_level LEVEL) {
 	logLevel = _level
-}
-
-func LogHandler(fileDir string, num int) {
-
-	for {
-		DeleteLog(fileDir, num)
-		time.Sleep(10 * time.Second)
-	}
-
 }
 
 func DeleteLog(fileDir string, num int) {
@@ -98,7 +90,9 @@ func DeleteLog(fileDir string, num int) {
 		if i < len(dir_list)-num {
 			if isExist(name) {
 				err := os.Remove(name)
-				fmt.Println("os.Remove error:", err)
+				if err != nil {
+					fmt.Println("os.Remove error:", err)
+				}
 			}
 
 		}
@@ -110,9 +104,9 @@ func SetRollingDaily(fileDir string, num int) {
 	RollingFile = false
 	dailyRolling = true
 	t, _ := time.Parse(DATEFORMAT, time.Now().Format(DATEFORMAT))
-	logObj = &_FILE{dir: fileDir, _date: &t, isCover: false, mu: new(sync.RWMutex)}
-	go LogHandler(fileDir, num)
+	logObj = &_FILE{dir: fileDir, _date: &t, isCover: false, mu: new(sync.RWMutex), day: num}
 	createNewFile()
+	DeleteLog(logObj.dir, logObj.day)
 }
 func createNewFile() {
 	logObj.mu.Lock()
@@ -289,5 +283,6 @@ func fileCheck() {
 		t, _ := time.Parse(DATEFORMAT, time.Now().Format(DATEFORMAT))
 		logObj._date = &t
 		createNewFile()
+		DeleteLog(logObj.dir, logObj.day)
 	}
 }
