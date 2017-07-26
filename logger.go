@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -28,7 +29,9 @@ var consoleAppender bool = true
 var RollingFile bool = false
 var logObj *_FILE
 
-const DATEFORMAT = "2006-01-02"
+const DATEFORMAT = "2006-01-02:15"
+const DATEFORMAT1 = "2006-01-02"
+const label = 86400
 
 type UNIT int64
 
@@ -81,13 +84,15 @@ func DeleteLog(fileDir string, num int) {
 		return
 	}
 
-	for i, v := range dir_list {
+	for _, v := range dir_list {
 		name := fileDir + "/" + v.Name()
 		if v.IsDir() {
 			DeleteLog(name, num)
 			continue
 		}
-		if i < len(dir_list)-num {
+		strs := strings.Split(v.Name(), ":")
+		bl := formatTime(strs[0], num)
+		if bl {
 			if isExist(name) {
 				err := os.Remove(name)
 				if err != nil {
@@ -100,6 +105,15 @@ func DeleteLog(fileDir string, num int) {
 	}
 }
 
+func formatTime(tm string, num int) bool {
+	tm2, _ := time.Parse(DATEFORMAT1, tm)
+	tm3, _ := time.Parse(DATEFORMAT1, time.Now().Format(DATEFORMAT1))
+	if (tm3.Unix() - tm2.Unix()) >= int64(label*num) {
+		return true
+	}
+	return false
+}
+
 func SetRollingDaily(fileDir string, num int) {
 	RollingFile = false
 	dailyRolling = true
@@ -108,6 +122,7 @@ func SetRollingDaily(fileDir string, num int) {
 	createNewFile()
 	DeleteLog(logObj.dir, logObj.day)
 }
+
 func createNewFile() {
 	logObj.mu.Lock()
 	defer logObj.mu.Unlock()
@@ -118,7 +133,7 @@ func createNewFile() {
 	err := os.Chdir(logObj.dir + "/" + "info/")
 	if err != nil {
 		fmt.Println("os.Chdir(logObj.dir + / + info/)", err)
-		err = os.Mkdir(logObj.dir+"/"+"info/", 0666)
+		err = os.Mkdir(logObj.dir+"/"+"info/", 0775)
 		if err != nil {
 			fmt.Println("os.Mkdir eror:", err)
 		}
@@ -132,7 +147,7 @@ func createNewFile() {
 	err = os.Chdir(logObj.dir + "/" + "warn/")
 	if err != nil {
 		fmt.Println("os.Chdir(logObj.dir + / + warn/)", err)
-		err = os.Mkdir(logObj.dir+"/"+"warn/", 0666)
+		err = os.Mkdir(logObj.dir+"/"+"warn/", 0775)
 		if err != nil {
 			fmt.Println("os.Mkdir eror:", err)
 		}
@@ -146,7 +161,7 @@ func createNewFile() {
 	err = os.Chdir(logObj.dir + "/" + "error/")
 	if err != nil {
 		fmt.Println("os.Chdir(logObj.dir + / + error/)", err)
-		err = os.Mkdir(logObj.dir+"/"+"error/", 0666)
+		err = os.Mkdir(logObj.dir+"/"+"error/", 0775)
 		if err != nil {
 			fmt.Println("os.Mkdir eror:", err)
 		}
